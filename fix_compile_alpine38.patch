@@ -1,0 +1,11 @@
+diff -uNr pgpool-II-4.0.2/src/tools/pgproto/read.c pgpool-II-4.0.2.fix_compile_alpine38/src/tools/pgproto/read.c
+--- pgpool-II-4.0.2/src/tools/pgproto/read.c	2018-11-21 11:01:35.000000000 +0200
++++ pgpool-II-4.0.2.fix_compile_alpine38/src/tools/pgproto/read.c	2018-12-13 15:41:42.690903899 +0200
+@@ -22,6 +22,7 @@
+ #include <stdio.h>
+ #include <string.h>
+ #include <errno.h>
++#include <sys/select.h>
+ #include <arpa/inet.h>
+ #include "pgproto/fe_memutils.h"
+ #include <libpq-fe.h>

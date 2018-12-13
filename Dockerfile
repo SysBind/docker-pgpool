@@ -24,10 +24,12 @@ RUN set -ex \
        linux-headers \
        make
 
+COPY fix_compile_alpine38.patch /
 
 RUN set -ex \
     \
     && cd /usr/src/pgpool-II \
+    && patch -p1 < /fix_compile_alpine38.patch \
     && ./configure \
     && make \
     && make install \
