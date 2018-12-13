@@ -1,0 +1,41 @@
+apiVersion: apps/v1beta1
+kind: StatefulSet
+metadata:
+  name: postgres
+spec:
+  serviceName: "postgres"
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+      - name: pgsql
+        image: postgres:11
+        ports:
+          - containerPort: 5432
+            name: pgsql
+        volumeMounts:
+          - name: data
+            mountPath: /var/lib/postgresql/data
+        env:
+          - name: PGDATA
+            value: /var/lib/postgresql/data/pgdata
+      - name: pgpool
+        image: sysbind/pgpool
+        ports:
+          - containerPort: 5433
+            name: pgpool
+          - containerPort: 9898
+            name: pcp
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+      annotations:
+        volume.alpha.kubernetes.io/storage-class: standard
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 512Mi

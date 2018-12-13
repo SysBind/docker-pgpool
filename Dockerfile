@@ -33,4 +33,16 @@ RUN set -ex \
     && ./configure \
     && make \
     && make install \
-    && apk del .fetch-deps .build-deps
+    && apk del .fetch-deps .build-deps \
+    && rm /*.patch
+
+RUN mkdir -p /var/run/pgpool && chown -R postgres:postgres /var/run/pgpool && chmod 2777 /var/run/pgpool
+
+COPY docker-entrypoint.sh /usr/local/bin/
+COPY pgpool.conf /usr/local/etc/pgpool.conf
+
+ENTRYPOINT ["docker-entrypoint.sh"]
+
+EXPOSE 5432
+
+CMD ["pgpool","-n"]
