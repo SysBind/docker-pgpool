@@ -1,3 +1,17 @@
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: pgsql-primary
+spec:
+  selector:
+    pgsql-role: pgsql-primary
+  ports:
+    - protocol: TCP
+      port: 5432
+      targetPort: 5432
+
+---
 apiVersion: apps/v1beta1
 kind: StatefulSet
 metadata:
@@ -10,25 +24,44 @@ spec:
       labels:
         app: postgres
     spec:
+      initContainers:
+      - name: pginit
+        image: sysbind/pgpool
+        command: ["docker-entrypoint.sh"]
+        args: ["pod-init"]
+        volumeMounts:
+          - name: initdb-scripts
+            mountPath: /docker-entrypoint-initdb.d
+          - name: data
+            mountPath: /var/lib/postgresql/data
+
       containers:
       - name: pgsql
-        image: postgres:11
+        image: postgres:11-alpine
         ports:
           - containerPort: 5432
             name: pgsql
         volumeMounts:
           - name: data
             mountPath: /var/lib/postgresql/data
+          - name: initdb-scripts
+            mountPath: /docker-entrypoint-initdb.d
         env:
           - name: PGDATA
             value: /var/lib/postgresql/data/pgdata
       - name: pgpool
         image: sysbind/pgpool
+        volumeMounts:
+          - name: initdb-scripts
+            mountPath: /docker-entrypoint-initdb.d
         ports:
           - containerPort: 5433
             name: pgpool
           - containerPort: 9898
             name: pcp
+      volumes:
+      - name: initdb-scripts
+        emptyDir: {}
   volumeClaimTemplates:
   - metadata:
       name: data

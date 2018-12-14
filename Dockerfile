@@ -38,8 +38,10 @@ RUN set -ex \
 
 RUN mkdir -p /var/run/pgpool && chown -R postgres:postgres /var/run/pgpool && chmod 2777 /var/run/pgpool
 
-COPY docker-entrypoint.sh /usr/local/bin/
+RUN mkdir /initdb.d/
+COPY initdb.d/* /initdb.d/
 COPY pgpool.conf /usr/local/etc/pgpool.conf
+COPY docker-entrypoint.sh /usr/local/bin/
 
 ENTRYPOINT ["docker-entrypoint.sh"]
 

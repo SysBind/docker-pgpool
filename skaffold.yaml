@@ -1,0 +1,10 @@
+---
+apiVersion: skaffold/v1beta1
+kind: Config
+build:
+  artifacts:
+  - image: sysbind/pgpool
+deploy:
+  kubectl:
+    manifests:
+    - manifest.yaml

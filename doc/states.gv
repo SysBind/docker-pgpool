@@ -1,0 +1,11 @@
+digraph finite_state_machine {
+    rankdir=LR;
+    size="8,5"
+
+    node [shape = doublecircle]; Init;
+    node [shape = point ]; qi
+
+    node [shape = circle] Running;
+    qi -> Init;
+    Init  -> Running [ label = "Provision" ];
+}
