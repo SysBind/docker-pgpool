@@ -1,11 +1,42 @@
 ---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: Role
+metadata:
+  name: pgpool
+  namespace: default
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+      - configmaps
+      - events
+    verbs:
+      - "*"
+
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: RoleBinding
+metadata:
+  name: pgpool
+  namespace: default
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: stolon
+subjects:
+  - kind: ServiceAccount
+    name: default
+    namespace: default
+
+---
 kind: Service
 apiVersion: v1
 metadata:
   name: pgsql-primary
 spec:
   selector:
-    pgsql-role: pgsql-primary
+    pgsql-role: primary
   ports:
     - protocol: TCP
       port: 5432

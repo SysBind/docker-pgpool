@@ -9,14 +9,15 @@ SERIAL=${ADDR[-1]}
 
 PGSQL_PRIMARY=pgsql-primary
 
-if [ "$1" = 'pod-init' ]; then
+if [[ "$1" = 'pod-init' ]]; then
     cp /initdb.d/* /docker-entrypoint-initdb.d/
 
-    if [ $SERIAL -eq 0 ]; then
+    if [[ ${SERIAL} -eq 0 ]]; then
         echo "Serial is 0"
+        kubectl label pod ${SETNAME}-0 pgsql-role=primary
     else
         echo "Serial is not 0, populating data from primary"
-        pg_basebackup --host $PGSQL_PRIMARY -Upostgres -D /var/lib/postgresql/data/pgdata
+        pg_basebackup --host $PGSQL_PRIMARY -R -Upostgres -D /var/lib/postgresql/data/pgdata
     fi
     exit 0
 fi
