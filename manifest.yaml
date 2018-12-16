@@ -11,6 +11,7 @@ rules:
       - pods
       - configmaps
       - events
+      - secrets
     verbs:
       - "*"
 
@@ -28,6 +29,13 @@ subjects:
   - kind: ServiceAccount
     name: default
     namespace: default
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: pgpool-config
+type: Opaque
 
 ---
 kind: Service
@@ -84,6 +92,8 @@ spec:
             mountPath: /docker-entrypoint-initdb.d
           - name: data
             mountPath: /var/lib/postgresql/data
+          - name: pgpool-config
+            mountPath: /usr/local/etc/bound
 
       containers:
       - name: pgsql
@@ -107,7 +117,6 @@ spec:
             mountPath: /docker-entrypoint-initdb.d
           - name: pgpool-config
             mountPath: /usr/local/etc/bound
-            readOnly: true
         ports:
           - containerPort: 5433
             name: pgpool
@@ -116,6 +125,9 @@ spec:
       volumes:
       - name: initdb-scripts
         emptyDir: {}
+      - name: pgpool-config
+        secret:
+          secretName: pgpool-config
   volumeClaimTemplates:
   - metadata:
       name: data

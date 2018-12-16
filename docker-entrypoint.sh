@@ -26,8 +26,10 @@ pod_init() {
 
     if [[ ${SERIAL} -eq 0 ]]; then
         echo "Serial is 0"
-        if ! kubectl get pod -l pgsql-role=primary; then
+        if [[ ! kubectl get pod -l pgsql-role=primary ]];  then
             kubectl label pod ${SETNAME}-0 pgsql-role=primary
+        else
+            echo "${HOSTNAME}: Already have pod labled master"
         fi
     else
         echo "Serial is not 0, populating data from primary"
@@ -35,11 +37,19 @@ pod_init() {
     fi
 
 
-    if ! kubectl get secret pgpool-config; then
+    if [[ ! -f /usr/local/etc/bound/pgpool.conf ]]; then
+        echo "first cluster turn-up, populating pgpool.conf and others"
+        touch ./pool_passwd
         generate_pgpool_backend_conf
-        echo "first cluster turn-up, Generating pgpool.conf as secret"
         cat /usr/local/etc/pgpool.conf /usr/local/etc/pgpool-backend.conf > ./pgpool.conf
-        kubectl create secret generic pgpool-config --from-file=./pgpool.conf
+        kubectl create secret generic pgpool-config --dry-run -o yaml \
+                --from-file=./pgpool.conf \
+                --from-file=/usr/local/etc/pcp.conf \
+                --from-file=./pool_passwd | kubectl apply -f -
+        # Wait for secret propagation to volume mount:
+        until [[ -f /usr/local/etc/bound/pgpool.conf ]];
+            do echo "Waiting for bound/pgpool.conf to appear..."; sleep 2s;
+        done
     fi
 }
 

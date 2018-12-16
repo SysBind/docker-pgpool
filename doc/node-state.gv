@@ -1,4 +1,4 @@
-digraph global_cluster_state {
+digraph node_state {
     rankdir=LR;
     size="8,5"
 
