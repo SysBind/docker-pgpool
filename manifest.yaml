@@ -23,7 +23,7 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: stolon
+  name: pgpool
 subjects:
   - kind: ServiceAccount
     name: default
@@ -41,6 +41,25 @@ spec:
     - protocol: TCP
       port: 5432
       targetPort: 5432
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: postgres
+spec:
+  ports:
+    - name: pgsql
+      protocol: TCP
+      port: 5432
+      targetPort: 5432
+    - name: pcp
+      protocol: TCP
+      port: 9898
+      targetPort: 9898
+  clusterIP: None
+  selector:
+    app: postgres
 
 ---
 apiVersion: apps/v1beta1
@@ -82,9 +101,13 @@ spec:
             value: /var/lib/postgresql/data/pgdata
       - name: pgpool
         image: sysbind/pgpool
+        command: ["pgpool", "--dont-detach","--config-file","/usr/local/etc/bound/pgpool.conf"]
         volumeMounts:
           - name: initdb-scripts
             mountPath: /docker-entrypoint-initdb.d
+          - name: pgpool-config
+            mountPath: /usr/local/etc/bound
+            readOnly: true
         ports:
           - containerPort: 5433
             name: pgpool

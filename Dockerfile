@@ -48,7 +48,10 @@ RUN wget -O /usr/local/bin/kubectl \
 
 COPY pgpool.conf /usr/local/etc/pgpool.conf
 COPY pcp.conf /usr/local/etc/pcp.conf
+COPY dot_pcppass /root/.pcppass
+RUN chmod 0600  /root/.pcppass
 COPY docker-entrypoint.sh /usr/local/bin/
+
 
 ENTRYPOINT ["docker-entrypoint.sh"]
 
