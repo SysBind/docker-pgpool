@@ -40,12 +40,15 @@ RUN mkdir -p /var/run/pgpool && chown -R postgres:postgres /var/run/pgpool && ch
 
 RUN mkdir /initdb.d/
 COPY initdb.d/* /initdb.d/
-COPY pgpool.conf /usr/local/etc/pgpool.conf
-COPY docker-entrypoint.sh /usr/local/bin/
+
 # kubectl
 RUN wget -O /usr/local/bin/kubectl \
             https://storage.googleapis.com/kubernetes-release/release/v1.13.1/bin/linux/amd64/kubectl \
     && chmod +x /usr/local/bin/kubectl
+
+COPY pgpool.conf /usr/local/etc/pgpool.conf
+COPY pcp.conf /usr/local/etc/pcp.conf
+COPY docker-entrypoint.sh /usr/local/bin/
 
 ENTRYPOINT ["docker-entrypoint.sh"]
 
