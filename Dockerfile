@@ -36,6 +36,8 @@ RUN set -ex \
     && apk del .fetch-deps .build-deps \
     && rm /*.patch
 
+RUN apk add jq
+
 RUN mkdir -p /var/run/pgpool && chown -R postgres:postgres /var/run/pgpool && chmod 2777 /var/run/pgpool
 
 RUN mkdir /initdb.d/

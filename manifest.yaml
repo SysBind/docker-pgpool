@@ -111,7 +111,7 @@ spec:
             value: /var/lib/postgresql/data/pgdata
       - name: pgpool
         image: sysbind/pgpool
-        command: ["pgpool", "--dont-detach","--config-file","/usr/local/etc/bound/pgpool.conf"]
+        args: ["pgpool", "--dont-detach","--config-file","/usr/local/etc/bound/pgpool.conf"]
         volumeMounts:
           - name: initdb-scripts
             mountPath: /docker-entrypoint-initdb.d

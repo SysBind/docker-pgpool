@@ -11,13 +11,14 @@ PGSQL_PRIMARY=pgsql-primary
 
 
 generate_pgpool_backend_conf() {
-   cat<<EOF > /usr/local/etc/pgpool-backend.conf
-# __BACKEND__$SERIAL
-backend_hostname$SERIAL = 'postgres-$SERIAL.postgres'
-backend_port$SERIAL = 5432
-backend_weight$SERIAL = 1
-backend_data_directory$SERIAL = '/var/lib/pgsql/data/pgdata'
-backend_flag$SERIAL = 'ALLOW_TO_FAILOVER'
+   cat<<EOF > /usr/local/etc/pgpool-backend-${SERIAL}.conf
+# __START_BACKEND__${SERIAL}
+backend_hostname${SERIAL} = 'postgres-${SERIAL}.postgres'
+backend_port${SERIAL} = 5432
+backend_weight${SERIAL} = 1
+backend_data_directory${SERIAL} = '/var/lib/pgsql/data/pgdata'
+backend_flag${SERIAL} = 'ALLOW_TO_FAILOVER'
+# __END__BACKEND__${SERIAL}
 EOF
 }
 
@@ -26,7 +27,7 @@ pod_init() {
 
     if [[ ${SERIAL} -eq 0 ]]; then
         echo "Serial is 0"
-        if [[ ! kubectl get pod -l pgsql-role=primary ]];  then
+        if [[ $(kubectl get pod -l pgsql-role=primary -o json | jq .items | jq length) -eq 0 ]];  then
             kubectl label pod ${SETNAME}-0 pgsql-role=primary
         else
             echo "${HOSTNAME}: Already have pod labled master"
@@ -41,15 +42,22 @@ pod_init() {
         echo "first cluster turn-up, populating pgpool.conf and others"
         touch ./pool_passwd
         generate_pgpool_backend_conf
-        cat /usr/local/etc/pgpool.conf /usr/local/etc/pgpool-backend.conf > ./pgpool.conf
+        cat /usr/local/etc/pgpool.conf /usr/local/etc/pgpool-backend-${SERIAL}.conf > ./pgpool.conf
         kubectl create secret generic pgpool-config --dry-run -o yaml \
                 --from-file=./pgpool.conf \
                 --from-file=/usr/local/etc/pcp.conf \
                 --from-file=./pool_passwd | kubectl apply -f -
-        # Wait for secret propagation to volume mount:
-        until [[ -f /usr/local/etc/bound/pgpool.conf ]];
-            do echo "Waiting for bound/pgpool.conf to appear..."; sleep 2s;
-        done
+    else
+        echo "${HOSTNAME}: checking for backend_hostname${SERIAL} in pgpool.conf"
+        if ! grep backend_hostname${SERIAL} /usr/local/etc/bound/pgpool.conf; then
+            echo "${HOSTNAME}: backend_hostname${SERIAL} not found self in pgpool conf, updating and taking over.."
+            generate_pgpool_backend_conf
+            cat /usr/local/etc/bound/pgpool.conf /usr/local/etc/pgpool-backend-${SERIAL}.conf > ./pgpool.conf
+            kubectl create secret generic pgpool-config --dry-run -o yaml \
+                    --from-file=./pgpool.conf \
+                    --from-file=/usr/local/etc/bound/pcp.conf \
+                    --from-file=/usr/local/etc/bound/pool_passwd | kubectl apply -f -
+        fi
     fi
 }
 
@@ -58,10 +66,12 @@ if [[ "$1" = 'pod-init' ]]; then
     exit 0
 fi
 
-if !  grep backend_hostname$SERIAL /usr/local/etc/bound/pgpool.conf; then
-    echo "not found self in pgpool conf, updating and taking over.."
-    kubectl create secret generic pgpool-config --from-file=./pgpool.conf --dry-run -o yaml | kubectl apply -f -
-fi
+# fixup ~/.pcppass
+cp ${HOME}/.pcppass ${HOME}/.pcppass-new
+for i in `seq 0 ${SERIAL}`; do
+    sed 's/localhost/'${SETNAME}-${i}'/' ${HOME}/.pcppass >> ${HOME}/.pcppass-new
+done
+mv ${HOME}/.pcppass-new ${HOME}/.pcppass
 
 echo "Executing $@"
 exec "$@"
