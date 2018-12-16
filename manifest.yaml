@@ -54,6 +54,19 @@ spec:
 kind: Service
 apiVersion: v1
 metadata:
+  name: pgpool
+spec:
+  selector:
+    pgpool-role: active
+  ports:
+    - protocol: TCP
+      port: 5433
+      targetPort: 5433
+
+---
+kind: Service
+apiVersion: v1
+metadata:
   name: postgres
 spec:
   ports:
