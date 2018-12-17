@@ -9,18 +9,43 @@ SERIAL=${ADDR[-1]}
 
 PGSQL_PRIMARY=pgsql-primary
 
+generate_common_conf() {
+    replicas=$1
 
-generate_pgpool_backend_conf() {
-   cat<<EOF > /usr/local/etc/pgpool-backend-${SERIAL}.conf
-# __START_BACKEND__${SERIAL}
-backend_hostname${SERIAL} = 'postgres-${SERIAL}.postgres'
-backend_port${SERIAL} = 5432
-backend_weight${SERIAL} = 1
-backend_data_directory${SERIAL} = '/var/lib/pgsql/data/pgdata'
-backend_flag${SERIAL} = 'ALLOW_TO_FAILOVER'
-# __END__BACKEND__${SERIAL}
+    cp /usr/local/etc/pgpool.conf /usr/local/etc/pgpool.common.conf
+
+    for idx in `seq 0 $((replicas-1))`; do
+        cat<<EOF >> /usr/local/etc/pgpool.common.conf
+# __START_BACKEND__${idx}
+backend_hostname${idx} = 'postgres-${idx}.postgres'
+backend_port${idx} = 5432
+backend_weight${idx} = 1
+backend_data_directory${idx} = '/var/lib/pgsql/data/pgdata'
+backend_flag${idx} = 'ALLOW_TO_FAILOVER'
+# __END__BACKEND__${idx}
 EOF
+    done
 }
+
+generate_backend_conf() {
+   replicas=$1
+
+   cp /usr/local/etc/pgpool.common.conf /usr/local/etc/pgpool-${SERIAL}.conf
+   cat<<EOF >> /usr/local/etc/pgpool-${SERIAL}.conf
+use_watchdog = on
+wd_lifecheck_method = 'query'
+wd_hostname = ${HOSTNAME}
+EOF
+    for idx in `seq 0 $((replicas-1))`; do
+        [[ $idx -eq $SERIAL ]] && continue
+        cat<<EOF >> /usr/local/etc/pgpool-${SERIAL}.conf
+other_pgpool_hostname${idx} = ${SETNAME}-${idx}.${SETNAME}
+other_pgpool_port${idx} = 5433
+other_wd_port${idx} = 9000
+EOF
+    done
+}
+
 
 pod_init() {
     cp /initdb.d/* /docker-entrypoint-initdb.d/
@@ -36,29 +61,6 @@ pod_init() {
         echo "Serial is not 0, populating data from primary"
         pg_basebackup --host $PGSQL_PRIMARY -R -X stream -Upostgres -D /var/lib/postgresql/data/pgdata
     fi
-
-
-    if [[ ! -f /usr/local/etc/bound/pgpool.conf ]]; then
-        echo "first cluster turn-up, populating pgpool.conf and others"
-        touch ./pool_passwd
-        generate_pgpool_backend_conf
-        cat /usr/local/etc/pgpool.conf /usr/local/etc/pgpool-backend-${SERIAL}.conf > ./pgpool.conf
-        kubectl create secret generic pgpool-config --dry-run -o yaml \
-                --from-file=./pgpool.conf \
-                --from-file=/usr/local/etc/pcp.conf \
-                --from-file=./pool_passwd | kubectl apply -f -
-    else
-        echo "${HOSTNAME}: checking for backend_hostname${SERIAL} in pgpool.conf"
-        if ! grep backend_hostname${SERIAL} /usr/local/etc/bound/pgpool.conf; then
-            echo "${HOSTNAME}: backend_hostname${SERIAL} not found self in pgpool conf, updating and taking over.."
-            generate_pgpool_backend_conf
-            cat /usr/local/etc/bound/pgpool.conf /usr/local/etc/pgpool-backend-${SERIAL}.conf > ./pgpool.conf
-            kubectl create secret generic pgpool-config --dry-run -o yaml \
-                    --from-file=./pgpool.conf \
-                    --from-file=/usr/local/etc/bound/pcp.conf \
-                    --from-file=/usr/local/etc/bound/pool_passwd | kubectl apply -f -
-        fi
-    fi
 }
 
 if [[ "$1" = 'pod-init' ]]; then
@@ -66,12 +68,23 @@ if [[ "$1" = 'pod-init' ]]; then
     exit 0
 fi
 
+
+spec_replicas=`kubectl get sts ${SETNAME} -o json | jq .spec.replicas`
+
+generate_common_conf ${spec_replicas}
+generate_backend_conf ${spec_replicas}
+rm  -v /usr/local/etc/pgpool.conf && ln -sv /usr/local/etc/pgpool-${SERIAL}.conf /usr/local/etc/pgpool.conf
+
 # fixup ~/.pcppass
 cp ${HOME}/.pcppass ${HOME}/.pcppass-new
-for i in `seq 0 ${SERIAL}`; do
+for i in `seq 0 $((spec_replicas-1))`; do
     sed 's/localhost/'${SETNAME}-${i}'/' ${HOME}/.pcppass >> ${HOME}/.pcppass-new
 done
 mv ${HOME}/.pcppass-new ${HOME}/.pcppass
+
+for i in `seq $((SERIAL+1)) $((spec_replicas-1))`; do
+    until ping -c1 ${SETNAME}-${i}.${SETNAME}; do echo "waiting for ${SETNAME}-${i}.${SETNAME} to appear..";sleep 2s; done
+done
 
 echo "Executing $@"
 exec "$@"

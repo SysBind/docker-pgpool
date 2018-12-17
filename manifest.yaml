@@ -1,25 +1,30 @@
 ---
-apiVersion: rbac.authorization.k8s.io/v1beta1
-kind: Role
+apiVersion: v1
+kind: ServiceAccount
 metadata:
   name: pgpool
+
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: pgpool-patch
   namespace: default
 rules:
   - apiGroups:
       - ""
     resources:
       - pods
-      - configmaps
-      - events
-      - secrets
     verbs:
-      - "*"
+      - patch
+
 
 ---
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: pgpool
+  name: pgpool-view
   namespace: default
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -27,15 +32,24 @@ roleRef:
   name: pgpool
 subjects:
   - kind: ServiceAccount
-    name: default
+    name: pgpool
     namespace: default
 
 ---
-apiVersion: v1
-kind: Secret
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
 metadata:
-  name: pgpool-config
-type: Opaque
+  name: pgpool
+  namespace: default
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: view
+subjects:
+  - kind: ServiceAccount
+    name: pgpool
+    namespace: default
+
 
 ---
 kind: Service
@@ -78,23 +92,31 @@ spec:
       protocol: TCP
       port: 9898
       targetPort: 9898
+    - name: watchdog
+      protocol: TCP
+      port: 9000
+      targetPort: 9000
   clusterIP: None
   selector:
     app: postgres
 
 ---
-apiVersion: apps/v1beta1
+apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: postgres
 spec:
   serviceName: "postgres"
-  replicas: 2
+  replicas: 3
+  selector:
+    matchLabels:
+      app: postgres
   template:
     metadata:
       labels:
         app: postgres
     spec:
+      serviceAccountName: pgpool
       initContainers:
       - name: pginit
         image: sysbind/pgpool
@@ -105,8 +127,6 @@ spec:
             mountPath: /docker-entrypoint-initdb.d
           - name: data
             mountPath: /var/lib/postgresql/data
-          - name: pgpool-config
-            mountPath: /usr/local/etc/bound
 
       containers:
       - name: pgsql
@@ -124,23 +144,19 @@ spec:
             value: /var/lib/postgresql/data/pgdata
       - name: pgpool
         image: sysbind/pgpool
-        args: ["pgpool", "--dont-detach","--config-file","/usr/local/etc/bound/pgpool.conf"]
         volumeMounts:
           - name: initdb-scripts
             mountPath: /docker-entrypoint-initdb.d
-          - name: pgpool-config
-            mountPath: /usr/local/etc/bound
         ports:
           - containerPort: 5433
             name: pgpool
           - containerPort: 9898
             name: pcp
+          - containerPort: 9000
+            name: watchdog
       volumes:
       - name: initdb-scripts
         emptyDir: {}
-      - name: pgpool-config
-        secret:
-          secretName: pgpool-config
   volumeClaimTemplates:
   - metadata:
       name: data
