@@ -34,7 +34,8 @@ generate_backend_conf() {
    cat<<EOF >> /usr/local/etc/pgpool-${SERIAL}.conf
 use_watchdog = on
 wd_lifecheck_method = 'query'
-wd_hostname = ${HOSTNAME}
+wd_hostname = ${HOSTNAME}.${SETNAME}
+wd_authkey = ''
 EOF
     for idx in `seq 0 $((replicas-1))`; do
         [[ $idx -eq $SERIAL ]] && continue
@@ -59,7 +60,7 @@ pod_init() {
         fi
     else
         echo "Serial is not 0, populating data from primary"
-        pg_basebackup --host $PGSQL_PRIMARY -R -X stream -Upostgres -D /var/lib/postgresql/data/pgdata
+        pg_basebackup --host $PGSQL_PRIMARY -R -Upostgres -D /var/lib/postgresql/data/pgdata
     fi
 }
 
