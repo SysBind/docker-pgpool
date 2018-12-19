@@ -88,5 +88,6 @@ for i in `seq $((SERIAL+1)) $((spec_replicas-1))`; do
     until ping -c1 ${SETNAME}-${i}.${SETNAME}; do echo "waiting for ${SETNAME}-${i}.${SETNAME} to appear..";sleep 2s; done
 done
 
+until psql -Upgpool_checker --host localhost postgres -c "SELECT 1"; do echo "waiting for own postgres"; sleep 2s; done
 echo "Executing $@"
 exec "$@"
