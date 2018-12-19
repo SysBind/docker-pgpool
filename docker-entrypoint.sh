@@ -9,12 +9,14 @@ SERIAL=${ADDR[-1]}
 
 PGSQL_PRIMARY=pgsql-primary
 
+SPEC_REPLICAS=`kubectl get sts ${SETNAME} -o json | jq .spec.replicas`
+
 generate_common_conf() {
     replicas=$1
 
     cp /usr/local/etc/pgpool.conf /usr/local/etc/pgpool.common.conf
 
-    for idx in `seq 0 $((replicas-1))`; do
+    for idx in `seq 0 $((SPEC_REPLICAS-1))`; do
         cat<<EOF >> /usr/local/etc/pgpool.common.conf
 # __START_BACKEND__${idx}
 backend_hostname${idx} = 'postgres-${idx}.postgres'
@@ -28,8 +30,6 @@ EOF
 }
 
 generate_backend_conf() {
-   replicas=$1
-
    cp /usr/local/etc/pgpool.common.conf /usr/local/etc/pgpool-${SERIAL}.conf
    cat<<EOF >> /usr/local/etc/pgpool-${SERIAL}.conf
 use_watchdog = on
@@ -38,7 +38,7 @@ wd_lifecheck_user = 'pgpool_checker'
 wd_hostname = ${HOSTNAME}.${SETNAME}
 wd_authkey = ''
 EOF
-    for idx in `seq 0 $((replicas-1))`; do
+    for idx in `seq 0 $((SPEC_REPLICAS-1))`; do
         [[ $idx -eq $SERIAL ]] && continue
         cat<<EOF >> /usr/local/etc/pgpool-${SERIAL}.conf
 other_pgpool_hostname${idx} = ${SETNAME}-${idx}.${SETNAME}
@@ -54,6 +54,13 @@ pod_init() {
 
     if [[ ${SERIAL} -eq 0 ]]; then
         echo "Serial is 0"
+        # Create Replication Slots
+
+        for idx in `seq 1 $((SPEC_REPLICAS-1))`; do            
+            cat <<EOF >> /docker-entrypoint-initdb.d/replications-slots.sql
+SELECT * FROM pg_create_physical_replication_slot('base_backup_${idx}');
+EOF
+        done
         if [[ $(kubectl get pod -l pgsql-role=primary -o json | jq .items | jq length) -eq 0 ]];  then
             kubectl label pod ${SETNAME}-0 pgsql-role=primary
         else
@@ -61,7 +68,7 @@ pod_init() {
         fi
     else
         echo "Serial is not 0, populating data from primary"        
-        pg_basebackup --host ${PGSQL_PRIMARY} --user postgres --write-recovery-conf -D /var/lib/postgresql/data/pgdata
+        pg_basebackup --host ${PGSQL_PRIMARY} --user postgres --write-recovery-conf --wal-method=stream --slot=base_backup_${SERIAL} -D /var/lib/postgresql/data/pgdata
     fi
 }
 
@@ -70,21 +77,18 @@ if [[ "$1" = 'pod-init' ]]; then
     exit 0
 fi
 
-
-spec_replicas=`kubectl get sts ${SETNAME} -o json | jq .spec.replicas`
-
-generate_common_conf ${spec_replicas}
-generate_backend_conf ${spec_replicas}
+generate_common_conf
+generate_backend_conf
 rm  -v /usr/local/etc/pgpool.conf && ln -sv /usr/local/etc/pgpool-${SERIAL}.conf /usr/local/etc/pgpool.conf
 
 # fixup ~/.pcppass
 cp ${HOME}/.pcppass ${HOME}/.pcppass-new
-for i in `seq 0 $((spec_replicas-1))`; do
+for i in `seq 0 $((SPEC_REPLICAS-1))`; do
     sed 's/localhost/'${SETNAME}-${i}'/' ${HOME}/.pcppass >> ${HOME}/.pcppass-new
 done
 mv ${HOME}/.pcppass-new ${HOME}/.pcppass
 
-for i in `seq $((SERIAL+1)) $((spec_replicas-1))`; do
+for i in `seq $((SERIAL+1)) $((SPEC_REPLICAS-1))`; do
     until ping -c1 ${SETNAME}-${i}.${SETNAME}; do echo "waiting for ${SETNAME}-${i}.${SETNAME} to appear..";sleep 2s; done
 done
 
