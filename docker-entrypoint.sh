@@ -61,7 +61,7 @@ pod_init() {
         fi
     else
         echo "Serial is not 0, populating data from primary"        
-        pg_basebackup --host ${PGSQL_PRIMARY} -Upostgres -D /var/lib/postgresql/data/pgdata
+        pg_basebackup --host ${PGSQL_PRIMARY} --user postgres --write-recovery-conf -D /var/lib/postgresql/data/pgdata
     fi
 }
 
