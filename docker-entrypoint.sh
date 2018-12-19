@@ -42,7 +42,7 @@ EOF
     for i in `seq 0 $((SPEC_REPLICAS-1))`; do
         [[ $i -eq $SERIAL ]] && continue        
         cat<<EOF >> /usr/local/etc/pgpool-${SERIAL}.conf
-other_pgpool_hostname${idx} = ${SETNAME}-${idx}.${SETNAME}
+other_pgpool_hostname${idx} = ${SETNAME}-${i}.${SETNAME}
 other_pgpool_port${idx} = 5433
 other_wd_port${idx} = 9000
 EOF
@@ -90,9 +90,9 @@ for i in `seq 0 $((SPEC_REPLICAS-1))`; do
 done
 mv ${HOME}/.pcppass-new ${HOME}/.pcppass
 
-until psql -Upgpool_checker --host localhost postgres -c "SELECT 1"; do echo "waiting for own postgres" 2>&1 > /dev/null; sleep 5s; done
+until psql -Upgpool_checker --host localhost postgres -c "SELECT 1"; do echo "waiting for own postgres" 2>&1>/dev/null; sleep 5s; done
 for i in `seq $((SERIAL+1)) $((SPEC_REPLICAS-1))`; do
-    until ping -c1 ${SETNAME}-${i}.${SETNAME} 2>&1 > /dev/null; do echo "waiting for ${SETNAME}-${i}.${SETNAME} to appear..";sleep 5s; done
+    until ping -c1 ${SETNAME}-${i}.${SETNAME} 2>&1>/dev/null; do echo "waiting for ${SETNAME}-${i}.${SETNAME} to appear..";sleep 5s; done
 done
 
 for i in `seq $((SERIAL+1)) $((SPEC_REPLICAS-1))`; do
@@ -101,6 +101,8 @@ for i in `seq $((SERIAL+1)) $((SPEC_REPLICAS-1))`; do
     done
 done
 
+echo "waiting $((SERIAL*30)) seconds before starting up.."
+sleep $((SERIAL*30))s
 
 echo "Executing $@"
 exec "$@"
