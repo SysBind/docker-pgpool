@@ -38,13 +38,15 @@ wd_lifecheck_user = 'pgpool_checker'
 wd_hostname = ${HOSTNAME}.${SETNAME}
 wd_authkey = ''
 EOF
-    for idx in `seq 0 $((SPEC_REPLICAS-1))`; do
-        [[ $idx -eq $SERIAL ]] && continue
+    idx=0
+    for i in `seq 0 $((SPEC_REPLICAS-1))`; do
+        [[ $i -eq $SERIAL ]] && continue        
         cat<<EOF >> /usr/local/etc/pgpool-${SERIAL}.conf
 other_pgpool_hostname${idx} = ${SETNAME}-${idx}.${SETNAME}
 other_pgpool_port${idx} = 5433
 other_wd_port${idx} = 9000
 EOF
+        idx=$((idx+1))
     done
 }
 
@@ -88,10 +90,17 @@ for i in `seq 0 $((SPEC_REPLICAS-1))`; do
 done
 mv ${HOME}/.pcppass-new ${HOME}/.pcppass
 
+until psql -Upgpool_checker --host localhost postgres -c "SELECT 1"; do echo "waiting for own postgres" 2>&1 > /dev/null; sleep 5s; done
 for i in `seq $((SERIAL+1)) $((SPEC_REPLICAS-1))`; do
-    until ping -c1 ${SETNAME}-${i}.${SETNAME}; do echo "waiting for ${SETNAME}-${i}.${SETNAME} to appear..";sleep 2s; done
+    until ping -c1 ${SETNAME}-${i}.${SETNAME} 2>&1 > /dev/null; do echo "waiting for ${SETNAME}-${i}.${SETNAME} to appear..";sleep 5s; done
 done
 
-until psql -Upgpool_checker --host localhost postgres -c "SELECT 1"; do echo "waiting for own postgres"; sleep 2s; done
+for i in `seq $((SERIAL+1)) $((SPEC_REPLICAS-1))`; do
+    until psql -Upgpool_checker --host ${SETNAME}-${i}.${SETNAME} postgres -c "SELECT 1"; do 
+        echo "waiting for ${SETNAME}-${i}.${SETNAME} be ready..";sleep 2s; 
+    done
+done
+
+
 echo "Executing $@"
 exec "$@"
