@@ -6,6 +6,9 @@ digraph global_cluster_state {
     node [shape = point ]; qi
 
     node [shape = circle] Running;
+    node [shape = circle] Failover;
     qi -> Init;
     Init  -> Running [ label = "Provision" ];
+    Running -> Failover;
+    Failover -> Running;
 }

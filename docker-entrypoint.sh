@@ -34,6 +34,7 @@ generate_backend_conf() {
    cat<<EOF >> /usr/local/etc/pgpool-${SERIAL}.conf
 use_watchdog = on
 wd_lifecheck_method = 'query'
+wd_lifecheck_user = 'pgpool_checker'
 wd_hostname = ${HOSTNAME}.${SETNAME}
 wd_authkey = ''
 EOF
@@ -59,8 +60,8 @@ pod_init() {
             echo "${HOSTNAME}: Already have pod labled master"
         fi
     else
-        echo "Serial is not 0, populating data from primary"
-        pg_basebackup --host $PGSQL_PRIMARY -R -Upostgres -D /var/lib/postgresql/data/pgdata
+        echo "Serial is not 0, populating data from primary"        
+        pg_basebackup --host ${PGSQL_PRIMARY} -Upostgres -D /var/lib/postgresql/data/pgdata
     fi
 }
 
