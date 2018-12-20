@@ -33,8 +33,9 @@ generate_backend_conf() {
    cp /usr/local/etc/pgpool.common.conf /usr/local/etc/pgpool-${SERIAL}.conf
    cat<<EOF >> /usr/local/etc/pgpool-${SERIAL}.conf
 use_watchdog = on
-wd_lifecheck_method = 'query'
-wd_lifecheck_user = 'pgpool_checker'
+failover_when_quorum_exists = off
+wd_lifecheck_method = 'heartbeat'
+wd_heartbeat_port = 9694
 wd_hostname = ${HOSTNAME}.${SETNAME}
 wd_authkey = ''
 EOF
@@ -45,6 +46,9 @@ EOF
 other_pgpool_hostname${idx} = ${SETNAME}-${i}.${SETNAME}
 other_pgpool_port${idx} = 5433
 other_wd_port${idx} = 9000
+
+heartbeat_destination${idx} = ${SETNAME}-${i}.${SETNAME}
+heartbeat_destination_port${idx} = 9694
 EOF
         idx=$((idx+1))
     done
@@ -100,9 +104,6 @@ for i in `seq $((SERIAL+1)) $((SPEC_REPLICAS-1))`; do
         echo "waiting for ${SETNAME}-${i}.${SETNAME} be ready..";sleep 2s; 
     done
 done
-
-echo "waiting $((SERIAL*30)) seconds before starting up.."
-sleep $((SERIAL*30))s
 
 echo "Executing $@"
 exec "$@"

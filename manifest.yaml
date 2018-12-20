@@ -96,6 +96,10 @@ spec:
       protocol: TCP
       port: 9000
       targetPort: 9000
+    - name: heartbeat
+      protocol: UDP
+      port: 9694
+      targetPort: 9694
   clusterIP: None
   selector:
     app: postgres
