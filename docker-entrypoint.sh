@@ -33,11 +33,11 @@ generate_backend_conf() {
    cp /usr/local/etc/pgpool.common.conf /usr/local/etc/pgpool-${SERIAL}.conf
    cat<<EOF >> /usr/local/etc/pgpool-${SERIAL}.conf
 use_watchdog = on
-failover_when_quorum_exists = off
 wd_lifecheck_method = 'heartbeat'
 wd_heartbeat_port = 9694
 wd_hostname = ${HOSTNAME}.${SETNAME}
 wd_authkey = ''
+wd_priority = $((SERIAL+1))
 EOF
     idx=0
     for i in `seq 0 $((SPEC_REPLICAS-1))`; do
