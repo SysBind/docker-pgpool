@@ -53,7 +53,7 @@ COPY pcp.conf /usr/local/etc/pcp.conf
 COPY dot_pcppass /root/.pcppass
 RUN chmod 0600  /root/.pcppass
 COPY docker-entrypoint.sh /usr/local/bin/
-
+COPY scripts/postgre-failover.sh /usr/local/bin/
 
 ENTRYPOINT ["docker-entrypoint.sh"]
 

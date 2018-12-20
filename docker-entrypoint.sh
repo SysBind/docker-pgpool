@@ -33,6 +33,7 @@ generate_backend_conf() {
    cp /usr/local/etc/pgpool.common.conf /usr/local/etc/pgpool-${SERIAL}.conf
    cat<<EOF >> /usr/local/etc/pgpool-${SERIAL}.conf
 use_watchdog = on
+failover_when_quorum_exists = on
 wd_lifecheck_method = 'heartbeat'
 wd_heartbeat_port = 9694
 wd_hostname = ${HOSTNAME}.${SETNAME}
@@ -77,6 +78,11 @@ EOF
         pg_basebackup --host ${PGSQL_PRIMARY} --user postgres --write-recovery-conf --wal-method=stream --slot=base_backup_${SERIAL} -D /var/lib/postgresql/data/pgdata
     fi
 }
+
+if [[ -f /var/lib/postgresql/data/pgdata/PG_VERSION ]]; then
+    echo "data volume already populated"
+    sleep 24h
+fi
 
 if [[ "$1" = 'pod-init' ]]; then
     pod_init
