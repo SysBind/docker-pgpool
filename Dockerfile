@@ -1,9 +1,9 @@
-FROM postgres:11-alpine
+FROM postgres:12-alpine
 
 MAINTAINER Asaf Ohayon <asaf@sysbind.co.il>
 
-ENV PGPOOL_VERSION=4.0.2
-ENV PGPOOL_SHA256 a9324dc84e63961476cd32e74e66b6fdebc5ec593942f8710a688eb88e50dcc1
+ARG PGPOOL_VERSION=4.1.0
+ARG PGPOOL_SHA256=a2515d3d046afda0612b34c2aeca14a2071020dafb1f32e745b4a3054c0018df
 
 RUN set -ex \
 	\
@@ -24,12 +24,10 @@ RUN set -ex \
        linux-headers \
        make
 
-COPY fix_compile_alpine38.patch /
 
 RUN set -ex \
     \
     && cd /usr/src/pgpool-II \
-    && patch -p1 < /fix_compile_alpine38.patch \
     && ./configure \
     && make \
     && make install \

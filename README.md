@@ -1,9 +1,23 @@
 # docker-pgpool
-Docker image for pgpool
+Docker image for pgpool-II
 
-## Testing with Minikube & Skaffold
-- Start minikube:
-```minikube start```
 
-- Skaffold:
-```skaffold dev```
+
+## Configuration
+BACKEND_HOSTNAME0 (Required)
+BACKEND_PORT0=5432
+BACKEND_WEIGHT0=1
+
+BACKEND_HOSTNAME1
+BACKEND_PORT1=5432
+BACKEND_WEIGHT1=1
+
+...
+
+BACKEND_HOSTNAMEN
+BACKEND_PORTN=5432
+BACKEND_WEIGHTN=1
+
+
+### Custom pgpool.conf
+
