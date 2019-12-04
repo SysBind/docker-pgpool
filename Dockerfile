@@ -6,7 +6,7 @@ ARG PGPOOL_VERSION=4.1.0
 ARG PGPOOL_SHA256=a2515d3d046afda0612b34c2aeca14a2071020dafb1f32e745b4a3054c0018df
 
 RUN set -ex \
-	&& apk add --no-cache --update libpq \
+	&& apk add --no-cache --update libpq bash \
 	&& apk add --no-cache --virtual .fetch-deps \
 		tar \
     && wget -O pgpool-II.tar.gz "http://www.pgpool.net/mediawiki/images/pgpool-II-$PGPOOL_VERSION.tar.gz" \

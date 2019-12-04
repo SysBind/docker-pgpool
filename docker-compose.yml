@@ -1,0 +1,45 @@
+version: '3'
+services:
+  postgresql-primary:
+    image: 'bitnami/postgresql:11'
+    ports:
+      - '5432'
+    volumes:
+      - 'postgresql_primary_data:/bitnami/postgresql'
+    environment:
+      - POSTGRESQL_REPLICATION_MODE=master
+      - POSTGRESQL_REPLICATION_USER=repl_user
+      - POSTGRESQL_REPLICATION_PASSWORD=repl_password
+      - POSTGRESQL_USERNAME=postgres
+      - POSTGRESQL_PASSWORD=password
+      - POSTGRESQL_DATABASE=database
+      - ALLOW_EMPTY_PASSWORD=yes
+  postgresql-standby:
+    image: 'bitnami/postgresql:11'
+    ports:
+      - '5432'
+    depends_on:
+      - postgresql-primary
+    environment:
+      - POSTGRESQL_REPLICATION_MODE=slave
+      - POSTGRESQL_REPLICATION_USER=repl_user
+      - POSTGRESQL_REPLICATION_PASSWORD=repl_password
+      - POSTGRESQL_MASTER_HOST=postgresql-primary
+      - POSTGRESQL_PASSWORD=password
+      - POSTGRESQL_MASTER_PORT_NUMBER=5432
+      - ALLOW_EMPTY_PASSWORD=yes
+  pgpool:
+    image: 'pgpool:alpine-4.1'
+    build:
+      context: .
+    ports:
+      - '5432'
+    depends_on:
+      - postgresql-primary
+      - postgresql-standby
+    environment:
+#      - BACKEND_HOSTNAME0=postgresql-primary
+      - BACKEND_HOSTNAME1=postgresql-standby
+volumes:
+  postgresql_primary_data:
+    driver: local
