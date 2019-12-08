@@ -38,9 +38,11 @@ services:
       - postgresql-primary
       - postgresql-standby
     environment:
+      - INIT_DELAY=5
       - BACKENDS=postgresql-primary postgresql-standby
       - HEALTHCHECK=postgres:password
       - SR_CHECK=postgres:password
+      - POOL_PASSWD=postgres:password
 volumes:
   postgresql_primary_data:
     driver: local

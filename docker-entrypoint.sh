@@ -2,9 +2,14 @@
 
 set -e
 
+
 if [ -z ${BACKENDS+x} ]; then
     >&2 echo "error: BACKENDS must be set";
     exit 2
+fi
+
+if [ -z ${INIT_DELAY+x} ]; then
+    INIT_DELAY=0
 fi
 
 if [  -f /usr/local/etc/pgpool.conf.original] ]; then
@@ -108,7 +113,7 @@ configure_healthcheck
 configure_sr_check
 
 echo "waiting for postgres.."
-sleep 10s
+sleep ${INIT_DELAY}s
 
 echo "Executing pgpool.."
 pgpool -n

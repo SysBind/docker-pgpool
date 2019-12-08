@@ -15,3 +15,8 @@ BACKENDS=host0 host1
 HEALTHCHECK=user:password
 SR_CHECK=user:password
 
+// POOL_PASSWD=user:password
+
+for testing:
+INIT_DELAY=0
+
