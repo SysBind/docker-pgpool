@@ -38,8 +38,9 @@ services:
       - postgresql-primary
       - postgresql-standby
     environment:
-#      - BACKEND_HOSTNAME0=postgresql-primary
-      - BACKEND_HOSTNAME1=postgresql-standby
+      - BACKENDS=postgresql-primary postgresql-standby
+      - HEALTHCHECK=postgres
+      - SR_CHECK=postgres:password
 volumes:
   postgresql_primary_data:
     driver: local

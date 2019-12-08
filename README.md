@@ -4,20 +4,14 @@ Docker image for pgpool-II
 
 
 ## Configuration
-BACKEND_HOSTNAME0 (Required)
-BACKEND_PORT0=5432
-BACKEND_WEIGHT0=1
+BACKENDS (Required)
+syntax:
+BACKENDS=host0:port0:datadir0 host1:port1:datadir1 ... hostN:portN:datadirN
+at least one backend.
+port and datadir can be ommited, default: 5432, /var/lib/pgsql/data e.g:
+BACKENDS=host0 host1
+(no quotation marks)
 
-BACKEND_HOSTNAME1
-BACKEND_PORT1=5432
-BACKEND_WEIGHT1=1
-
-...
-
-BACKEND_HOSTNAMEN
-BACKEND_PORTN=5432
-BACKEND_WEIGHTN=1
-
-
-### Custom pgpool.conf
+HEALTHCHECK=user:password
+SR_CHECK=user:password
 
