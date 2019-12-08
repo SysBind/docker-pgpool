@@ -33,13 +33,13 @@ services:
     build:
       context: .
     ports:
-      - '5432'
+      - '5433:5433'
     depends_on:
       - postgresql-primary
       - postgresql-standby
     environment:
       - BACKENDS=postgresql-primary postgresql-standby
-      - HEALTHCHECK=postgres
+      - HEALTHCHECK=postgres:password
       - SR_CHECK=postgres:password
 volumes:
   postgresql_primary_data:

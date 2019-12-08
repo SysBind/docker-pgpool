@@ -47,6 +47,6 @@ COPY docker-entrypoint.sh /usr/local/bin/
 
 ENTRYPOINT ["docker-entrypoint.sh"]
 
-EXPOSE 5432
+EXPOSE 5433
 
 CMD ["pgpool","-n"]

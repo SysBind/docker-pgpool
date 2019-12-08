@@ -107,5 +107,8 @@ done <<< "$BACKENDS"
 configure_healthcheck
 configure_sr_check
 
-echo "Executing pgpool"
+echo "waiting for postgres.."
+sleep 10s
+
+echo "Executing pgpool.."
 pgpool -n
