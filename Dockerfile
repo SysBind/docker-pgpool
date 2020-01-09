@@ -37,8 +37,6 @@ RUN set -ex \
     && apk del .fetch-deps .build-deps \
     && rm /*.patch
 
-RUN mkdir -p /var/run/pgpool && chown -R postgres:postgres /var/run/pgpool && chmod 2777 /var/run/pgpool
-
 COPY pgpool.conf /usr/local/etc/pgpool.conf
 COPY pcp.conf /usr/local/etc/pcp.conf
 COPY dot_pcppass /root/.pcppass
